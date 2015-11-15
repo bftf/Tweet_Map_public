@@ -1,0 +1,2 @@
+module MapQueryHelper
+end

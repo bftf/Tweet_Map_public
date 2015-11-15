@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style type="text/css">
+      html, body, #map-canvas { height: 100%; margin: 0; padding: 0;}
+      #tweetTable{
+          border: 1px solid;
+          margin-left: auto;
+          margin-right: auto;
+      }
+      td, tr{
+          border: 1px solid;
+      }
+  </style>
+
+  <script type="text/javascript"
+          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArzyYKcUontlx0HrhLxTFL5n6975qE_nw">
+  </script>
+  <script>
+        var map;
+        var marker;
+        var markers = [];
+      function initialize() {
+         var mapOptions = {
+              center: { lat: 49.607, lng: 6.1329},
+              zoom: 8
+         };
+         map = new google.maps.Map(document.getElementById('map-canvas'),mapOptions);
+
+         google.maps.event.addListener(map, 'dblclick', function(e) {
+            alert(e.latLng.lat() +" "+ e.latLng.lng());
+            //ajax callback
+            function ajaxCallback(){
+                return jQuery.ajax({
+                    data: {lat: e.latLng.lat(), lng: + e.latLng.lng()},
+                    dataType: 'script',
+                    type: 'post',
+                    url: "/map"
+                });
+            }
+            var promise = ajaxCallback();
+            promise.success(function () {
+                initialize();
+            });
+            promise.error(function () {
+                 alert("nope");
+             });
+         });
+         createMarker();
+      }
+
+      google.maps.event.addDomListener(window, 'load', initialize);
+
+      function displayTable(tableData){
+          var result = "<table id='tweetTable'>";
+          result+="<tr style='font-weight:bold'>"
+                  + "<td>User Name</td>"
+                  + "<td>Tweet Text</td>"
+                  + "</tr>";
+
+          for(var i=0; i<tableData.length; i++) {
+              result += "<tr>";
+
+                  result += "<td>"+tableData[i].user.name+"</td>";
+                  result += "<td>"+tableData[i].text+"</td>";
+
+              result += "</tr>";
+          }
+          result += "</table>";
+
+          document.getElementById("table").innerHTML = result;
+      }
+
+      function createMarker(){
+//          var array = JSON.parse(<%= raw @tweet_list %>);
+//          var test = document.getElementById('tweets_info').innerHTML;
+          var tweetsJson = document.getElementById('tweets_info').innerHTML;
+          var tweetArray = JSON.parse(tweetsJson);
+          displayTable(tweetArray);
+          for(var i = 0; i < tweetArray.length; i++){
+              marker = new google.maps.Marker({
+                  position: { lat: tweetArray[i].coordinates.latitude, lng: tweetArray[i].coordinates.longitude },
+                  map: map,
+                  title: tweetArray[i].text,
+                  clickable: true
+              });
+              markers.push(marker);
+          }
+
+          for(var i = 0; i < markers.length; i++){
+              google.maps.event.addListener(markers[i], 'click', function() {
+                  window.alert(this.title);
+              });
+          }
+
+          if(marker){
+              map.setZoom(6);
+              map.panTo(marker.position);
+          }
+      }
+  </script>
+
+</head>
+
+    <body>
+    <div id='tweets_info' style="display: none"><%= raw @tweet_list%></div>
+    <div style="margin-bottom: 5%;"></div>
+    <%= form_tag map_path do %>
+        <%= label_tag(:q, "Enter a location or a username:") %>
+        <%= text_field_tag(:q) %>
+        <%= render partial: "datepicker"%>
+        <%= label_tag(:t, "Date:") %>
+        <%= text_field_tag 't', nil, class:'date' %>
+        <%= submit_tag("GO!") %>
+        <a href = '/logout'> Logout</a>
+        <a href = '/map'>Display Tweets</a>
+        <%= session[:user_name] %>
+    <% end %>
+
+
+    <div style="margin-bottom: 5%;"></div>
+    <div id="wrapper" style="height: 40em; width: 80%; margin-left: 10%;">
+        <div id="map-canvas"></div>
+    </div>
+    <div id="table" style="margin-top: 5%; text-align: center; margin-bottom: 5%;">
+
+    </div>
+</body>
+</html>
